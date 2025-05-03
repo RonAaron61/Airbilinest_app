@@ -180,10 +180,14 @@
     </string>
     <string name="register_info">
         Please login using your airbilinest account, if you don\'t have an account please do a registration first.\n\n
-        For registrating new account please visit airbilinest website (<b>airbilineset.com</b>), and go to the healthcase proffesional and make new account.\n\n
+        For registrating new account please visit airbilinest website (<b>airbilinest.com</b>), and go to the healthcare profesional and make new account. \n\n
     </string>
     <string name="remember_me">
         Remember me
+    </string>
+
+    <string name="Keep_me_signed_in">
+        Keep me signed in
     </string>
 
     <!-- Control -->

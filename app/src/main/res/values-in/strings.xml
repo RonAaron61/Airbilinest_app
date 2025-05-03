@@ -181,11 +181,15 @@
 
     <string name="register_info">
         Login menggunakan akun airbilinest anda, jika belum ada silahkan lakukan registrasi terlebih dahulu.  \n\n
-        Untuk registrasi akun baru silahkan melakukan registrasi pada website airbilinest (<b>airbilineset.com</b>) dan masuk pada halaman profesional kesehatan
+        Untuk registrasi akun baru silahkan melakukan registrasi pada website airbilinest (<b>airbilinest.com</b>) dan masuk pada halaman profesional kesehatan
         dan lakukan registrasi akun baru.\n\n
     </string>
     <string name="remember_me">
         Ingat Saya
+    </string>
+
+    <string name="Keep_me_signed_in">
+        Biarkan saya tetap login
     </string>
 
     <!-- Control -->
