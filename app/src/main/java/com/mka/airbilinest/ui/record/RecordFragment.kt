@@ -2,35 +2,37 @@ package com.mka.airbilinest.ui.record
 
 import android.Manifest
 import android.app.AlertDialog
-import android.content.ContentValues
-import android.content.Context
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import com.mka.airbilinest.R
+import com.mka.airbilinest.databinding.FragmentRecordBinding
+import android.content.pm.PackageManager
+import android.util.Log
 import android.widget.Button
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.mka.airbilinest.DatabaseHelper
 import com.mka.airbilinest.Patient
 import com.mka.airbilinest.PatientAdapter
-import com.mka.airbilinest
-import com.mka.airbilinest.R
-import com.mka.airbilinest.databinding.FragmentRecordBinding
+import com.mka.airbilinest.PatientFormFragment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileOutputStream
+
+import android.content.ContentValues
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
+
 
 class RecordFragment : Fragment() {
 
@@ -40,22 +42,21 @@ class RecordFragment : Fragment() {
     private lateinit var exportButton: Button
     private lateinit var addButton: Button
     private var _binding: FragmentRecordBinding? = null
+
     private val binding get() = _binding!!
 
-    private var userId: Int = -1 // Simpan user_id pengguna yang sedang login
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+
         _binding = FragmentRecordBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
         dbHelper = DatabaseHelper(requireContext())
-
-        // Ambil user_id dari SharedPreferences atau dari proses login
-        userId = getUserIdFromSharedPreferences()
 
         recyclerView = root.findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -66,12 +67,11 @@ class RecordFragment : Fragment() {
         loadPatients()
 
         addButton.setOnClickListener {
-            val fragment = PatientFormFragment.newInstance(userId) // Kirim user_id ke PatientFormFragment
             requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.container_fragment, fragment, "PatientFormFragment")
+                .replace(R.id.container_fragment, PatientFormFragment(), "PatientFormFragment")
                 .addToBackStack(null)
                 .commit()
-            logFragmentStack()
+            logFragmentStack() // Check fragment stack
         }
 
         exportButton.setOnClickListener {
@@ -81,26 +81,38 @@ class RecordFragment : Fragment() {
         return root
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun loadPatients() {
-        val patientsList = dbHelper.getPatientsByUserId(userId) // Ambil data pasien berdasarkan user_id
-        adapter = PatientAdapter(patientsList, { patient: Patient ->
-            val fragment = PatientFormFragment.newInstance(patient, userId) // Kirim user_id ke PatientFormFragment
+        val patientsList = dbHelper.getAllPatients()
+        adapter = PatientAdapter(patientsList, { patient ->
+            // Edit patient
+            val fragment = PatientFormFragment.newInstance(patient)
+
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(R.id.container_fragment, fragment)
                 .addToBackStack(null)
                 .commit()
-        }, { patient: Patient ->
+
+        }, { patient ->
+            // Delete patient
             deletePatient(patient)
         })
         recyclerView.adapter = adapter
     }
 
     private fun deletePatient(patient: Patient) {
+        // Confirm the deletion with the user
         AlertDialog.Builder(requireContext())
             .setTitle("Delete Patient")
             .setMessage("Are you sure you want to delete ${patient.name}?")
             .setPositiveButton("Yes") { dialog, _ ->
+                // Delete from database
                 dbHelper.deletePatient(patient.id)
+                // Refresh the list
                 loadPatients()
                 Toast.makeText(requireContext(), "${patient.name} deleted", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
@@ -111,8 +123,10 @@ class RecordFragment : Fragment() {
 
     private fun checkPermissionsAndExportToExcel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Scoped Storage (Android 10 and above)
             exportToExcelScopedStorage()
         } else {
+            // Request WRITE_EXTERNAL_STORAGE permission (Android 9 and below)
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
@@ -122,9 +136,10 @@ class RecordFragment : Fragment() {
         }
     }
 
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun exportToExcelScopedStorage() {
-        val patientsList = dbHelper.getPatientsByUserId(userId) // Ambil data pasien berdasarkan user_id
+        val patientsList = dbHelper.getAllPatients()
 
         val workbook = XSSFWorkbook()
         val sheet = workbook.createSheet("Patient Data")
@@ -151,6 +166,7 @@ class RecordFragment : Fragment() {
             row.createCell(7).setCellValue(patient.bilirubinEnd)
         }
 
+        // Save the file to the external storage (Downloads folder)
         val contentResolver = requireContext().contentResolver
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, "PatientData.xlsx")
@@ -171,7 +187,7 @@ class RecordFragment : Fragment() {
     }
 
     private fun exportToExcelLegacyStorage() {
-        val patientsList = dbHelper.getPatientsByUserId(userId) // Ambil data pasien berdasarkan user_id
+        val patientsList = dbHelper.getAllPatients()
 
         val workbook = XSSFWorkbook()
         val sheet = workbook.createSheet("Patient Data")
@@ -198,6 +214,7 @@ class RecordFragment : Fragment() {
             row.createCell(7).setCellValue(patient.bilirubinEnd)
         }
 
+        // Save the file to the external storage (Downloads folder)
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloadsDir, "PatientData.xlsx")
 
@@ -209,6 +226,8 @@ class RecordFragment : Fragment() {
         Toast.makeText(requireContext(), "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
     }
 
+
+
     private fun logFragmentStack() {
         val fragmentManager = requireActivity().supportFragmentManager
         val fragments = fragmentManager.fragments
@@ -217,8 +236,4 @@ class RecordFragment : Fragment() {
         }
     }
 
-    private fun getUserIdFromSharedPreferences(): Int {
-        val sharedPreferences = requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-        return sharedPreferences.getInt("user_id", -1) // Kembalikan -1 jika user_id tidak ditemukan
-    }
 }
